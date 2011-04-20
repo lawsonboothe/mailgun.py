@@ -206,7 +206,7 @@ class MailgunMessage:
         >>> MailgunMessage.send_raw("me@myhost.com", "you@yourhost.com", raw_mime)        
         '''
         request = _Request(cls._messages_url('eml', servername))
-        request.add_data("{0}\n{1}\n\n{2}".format(sender, recipients, mime_body))
+        request.add_data(u"{0}\n{1}\n\n{2}".format(sender, recipients, mime_body).encode("utf-8"))
         request.add_header("Content-Type", "text/plain")
         _post(request)
    
