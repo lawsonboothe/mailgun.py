@@ -7,19 +7,19 @@ from pyactiveresource.connection import BadRequest, UnauthorizedAccess, Forbidde
 class Mailgun:
     '''
     Adding a route:
-    
+
     >>> Mailgun.init("api-key-secret")
     >>> route = Route.make_new(pattern = 'me@myhost.com', destination = 'http://myhost/accept_mail')
     >>> route.upsert()
 
     Sending a simple text message:
-    >>> MailgunMessage.send_text("sender@myhost.com", 'recipient@otherhost.com", "Subject", "Body")    
+    >>> MailgunMessage.send_text("sender@myhost.com", 'recipient@otherhost.com", "Subject", "Body")
 
     '''
     @staticmethod
     def init(api_key, api_url = "https://mailgun.net/api/"):
         MailgunResource._set_server_info(api_key, api_url)
-    
+
     @staticmethod
     def _handle_http_error(err):
         # This is a patch of private ActiveResource method.
@@ -69,15 +69,15 @@ class Mailgun:
         else:
             raise ConnectionError(err)
 
-        
+
 
 class MailgunResource(ActiveResource):
     '''
     Base class for Mailgun Resources, subclass of ActiveResource
-    Provides additional upsert() method.  
+    Provides additional upsert() method.
     '''
     _site = "you forgot to call Mailgun.init()"
-    
+
     @classmethod
     def _set_server_info(cls, api_key, api_url):
         cls._user = 'api_key'
@@ -85,7 +85,7 @@ class MailgunResource(ActiveResource):
         cls._site = api_url.strip().rstrip('/')
         # HACK: Force resource to recreate connection object with updated site.
         # String below is based on the fact that activeresource.ResourceMeta.connection property
-        # caches some object in "_connection" class variable. 
+        # caches some object in "_connection" class variable.
         cls._connection = None
 
     def upsert(self):
@@ -94,14 +94,14 @@ class MailgunResource(ActiveResource):
         There are 2 differences between upsert() and save().
         * Upsert does not throw exception if object already exist.
         * Upsert does not load id of the object.
-        
+
         It ensures that resource exists on the server and does not syncronize client object instance.
         In order to modify "upserted" object, you need to find() it first.
-        
+
             route = Route()
             route.pattern = '*@myhost.com'
             route.destination = 'http://myhost.com/addcomment'
-            route.upsert()        
+            route.upsert()
         '''
         type(self).post("upsert", self.to_xml())
 
@@ -110,11 +110,11 @@ class Route(MailgunResource):
     '''
     Route represents the basic rule:
     Message for particular recipient R is forwarded to destination D.
-    
-    A route has 2 properties: 
+
+    A route has 2 properties:
         * pattern     (applies to recipient address)
         * destination
-        
+
     The pair (pattern, destination) must be unique.
     There are 4 types of patterns:
 
@@ -122,7 +122,7 @@ class Route(MailgunResource):
         * exact string match, case-sensitive. (foo@bar.com)
         * pattern starts with *@ (*@example.com - matches all emails going to example.com)
         * any regular expression
-    
+
     A destination can be:
 
         * email address. Message, as it is, will be forwarded to the address
@@ -147,7 +147,7 @@ class Mailbox(MailgunResource):
     All mail arriving to email addresses that have mailboxes associated
     will be stored on the server and can be later accessed via IMAP or POP3
     protocols.
-    
+
     Mailbox has several properties:
 
     alex@gmail.com
@@ -168,70 +168,122 @@ class Mailbox(MailgunResource):
     def upsert_from_csv(cls, mailboxes):
         '''
         Upsert mailboxes contained in a csv string,
-        
+
         john@domain.com, password
-        doe@domain.com, password2         
+        doe@domain.com, password2
         '''
         request = _Request("{0}/mailboxes.txt?api_key={1}".format(MailgunResource._site, MailgunResource._password))
         request.add_data(mailboxes)
         request.add_header("Content-Type", "text/plain")
         _post(request)
 
-    
+
+class MailgunApiError(Exception):
+    def __init__(self, message):
+        self.message = message
+    def __str__(self):
+        return repr(self.message)
+
+
+def to_unicode(data):
+    if isinstance(data, list):
+        return map(to_unicode, data)
+
+    if isinstance(data, dict):
+        return dict(zip(map(to_unicode, data.keys()), map(to_unicode, data.values())))
+
+    if isinstance(data, str):
+        try:
+            return unicode(data, 'utf-8')
+        except UnicodeDecodeError:
+            raise MailgunApiError('Failed to convert to Unicode using UTF-8 codec: {0}'.format(data))
+
+    return data
+
+
+def to_utf_8(data):
+    if isinstance(data, list):
+        return map(to_utf_8, data)
+
+    if isinstance(data, dict):
+        return dict(zip(map(to_utf_8, data.keys()), map(to_utf_8, data.values())))
+
+    if isinstance(data, unicode):
+        return data.encode('utf-8')
+
+    return data
+
+
 class MailgunMessage:
     '''
     Send messages through Mailgun HTTP gateway, applying routing.
     SMTP sender/recipient specification are in the format most email programs utilize:
-        'Foo Bar' <foo@bar.com>  
-        "Foo Bar" <foo@bar.com>  
-        Foo Bar <foo@bar.com>    
-        <foo@bar.com>            
-        foo@bar.com          
-        
-    Recipient list is comma- or semicolon- delimited string of recipients        
+        'Foo Bar' <foo@bar.com>
+        "Foo Bar" <foo@bar.com>
+        Foo Bar <foo@bar.com>
+        <foo@bar.com>
+        foo@bar.com
+
+    Recipient list is comma- or semicolon- delimited string of recipients
     '''
     MAILGUN_TAG = "X-Mailgun-Tag"
+    CAMPAIGN_ID = "X-Campaign-Id"
 
     @classmethod
     def send_raw(cls, sender, recipients, mime_body, servername=''):
         '''
-        Sends a raw MIME message
-        
+        Sends a raw MIME message. Accepts either Unicode or UTF-8 encoded strings
+
         >>> Mailgun.init("api-key-dirty-secret")
         >>> raw_mime = "X-Priority: 1 (Highest)\n"\
                 "Content-Type: text/plain;charset=utf-8\n"\
                 "Subject: Hello!\n"\
                 "\n"\
                 "I construct MIME message and send it!"
-        >>> MailgunMessage.send_raw("me@myhost.com", "you@yourhost.com", raw_mime)        
+        >>> MailgunMessage.send_raw("me@myhost.com", "you@yourhost.com", raw_mime)
         '''
         request = _Request(cls._messages_url('eml', servername))
-        request.add_data(u"{0}\n{1}\n\n{2}".format(sender, recipients, mime_body).encode("utf-8"))
+        request.add_data(u"{0}\n{1}\n\n{2}".format(*to_unicode([sender, recipients, mime_body])).encode("utf-8"))
         request.add_header("Content-Type", "text/plain")
         _post(request)
-   
+
 
     @classmethod
     def send_txt(cls, sender, recipients, subject, text, servername='', options = None):
         '''
-        Sends a plain-text message
-        
+        Sends a plain-text message. Accepts either Unicode or UTF-8 encoded strings
+
         >>> MailgunMessage.send_text("me@myhost.com",
             "you@yourhost.com",
             "Hello",
-            "Hi!\nI am sending the message using Mailgun")          
-        '''        
-        params = dict(sender=sender, recipients=recipients, subject=subject, body=text)
+            "Hi!\nI am sending the message using Mailgun")
+        '''
+        params = to_unicode(dict(sender=sender, recipients=recipients, subject=subject, body=text))
         if options:
             params['options'] = simplejson.dumps(options)
         request = _Request(cls._messages_url('txt', servername))
-        request.add_data(urllib.urlencode(params))
+        request.add_data(urllib.urlencode(to_utf_8(params)))
         _post(request)
 
 
-         
+
     @staticmethod
     def _messages_url(format, servername=''):
         return "{0}/messages.{2}?api_key={1}&servername={3}".format(
             MailgunResource._site, MailgunResource._password, format, servername)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
