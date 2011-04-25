@@ -266,24 +266,7 @@ class MailgunMessage:
         _post(request)
 
 
-
     @staticmethod
     def _messages_url(format, servername=''):
         return "{0}/messages.{2}?api_key={1}&servername={3}".format(
             MailgunResource._site, MailgunResource._password, format, servername)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
