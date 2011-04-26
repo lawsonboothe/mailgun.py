@@ -2,23 +2,27 @@ Python wrapper for MailGun REST API
 
 Documentation:
 =============
-Please visit our documentation page at 
+
+Please visit our documentation page at
 http://documentation.mailgun.net
 
 
 Installation
 ============
 
-* Make sure you have ActiveResource gem installed:
-  pip install pyactiveresource
+There are two ways to install Mailgun API:
 
-* Download mailgun.py file or pull this repo
+1. sudo python setup.py install
+2. Grab mailgun.py from the 'lib' folder of this repo and place it on your PYTHONPATH manually
+
 
 Samples tryout:
 ===================
+
 > ./run_sample.sh samples/creating-routes.py
 > ./run_sample.sh samples/sending-mail.py
 > ./run_sample.sh samples/using-mailboxes.py
+
 
 Getting started:
 ================
@@ -32,6 +36,6 @@ for mailbox in Mailbox.find():
 
 For more visit http://documentation.mailgun.net
 
+
 --
 MG team
-
