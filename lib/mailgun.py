@@ -172,7 +172,7 @@ class Mailbox(MailgunResource):
         john@domain.com, password
         doe@domain.com, password2
         '''
-        request = _Request("%s/mailboxes.txt?api_key=%s" % (MailgunResource._site, MailgunResource._password))
+        request = _Request("{0}/mailboxes.txt?api_key={1}".format(MailgunResource._site, MailgunResource._password))
         request.add_data(mailboxes)
         request.add_header("Content-Type", "text/plain")
         _post(request)
@@ -196,7 +196,7 @@ def to_unicode(data):
         try:
             return unicode(data, 'utf-8')
         except UnicodeDecodeError:
-            raise MailgunApiError('Failed to convert to Unicode using UTF-8 codec: %s' % (data))
+            raise MailgunApiError('Failed to convert to Unicode using UTF-8 codec: {0}'.format(data))
 
     return data
 
@@ -243,8 +243,7 @@ class MailgunMessage:
         >>> MailgunMessage.send_raw("me@myhost.com", "you@yourhost.com", raw_mime)
         '''
         request = _Request(cls._messages_url('eml', servername))
-        unicode_data = u'%s\n%s\n\n%s' % tuple(to_unicode([sender, recipients, mime_body]))
-        request.add_data(unicode_data.encode('utf-8'))
+        request.add_data(u"{0}\n{1}\n\n{2}".format(*to_unicode([sender, recipients, mime_body])).encode("utf-8"))
         request.add_header("Content-Type", "text/plain")
         _post(request)
 
@@ -269,5 +268,5 @@ class MailgunMessage:
 
     @staticmethod
     def _messages_url(format, servername=''):
-        return "%(site)s/messages.%(format)s?api_key=%(password)s&servername=%(servername)s" % dict(
-            site=MailgunResource._site, password=MailgunResource._password, format=format, servername=servername)
+        return "{0}/messages.{2}?api_key={1}&servername={3}".format(
+            MailgunResource._site, MailgunResource._password, format, servername)

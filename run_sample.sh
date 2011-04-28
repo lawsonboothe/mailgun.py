@@ -1,4 +1,4 @@
 #!/bin/bash
-PYTHONPATH=$PYTHONPATH:../
+PYTHONPATH=$PYTHONPATH:../lib/
 export PYTHONPATH
 python $1
