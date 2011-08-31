@@ -11,7 +11,7 @@ def main():
 
     # lets make a catch-all route for all messages coming to @samples.mailgun.org
     # they will be HTTP POSTed to http://myhost/catch-all
-    Route.make_new(pattern = "*@samples.mailgun.org", 
+    Route.make_new(pattern = ".*@samples.mailgun.org",
                    destination = "http://samples.mailgun.org/post").upsert()
 
     # but messages coming to press@myhost need to be redirected to my-mailbox@gmail.com
