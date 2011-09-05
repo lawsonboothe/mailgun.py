@@ -229,6 +229,7 @@ class MailgunMessage:
     MAILGUN_TAG = "X-Mailgun-Tag"
     CAMPAIGN_ID = "X-Campaign-Id"
     REWRITE_LINKS = "X-Mailgun-Track"
+    MAILGUN_VARIABLES = "X-Mailgun-Variables"
 
     @classmethod
     def send_raw(cls, sender, recipients, mime_body, servername=''):
